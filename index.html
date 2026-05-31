@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Device OOP Polymorphism Web App</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #94a3b8;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #0f766e;
+      --warning: #ea580c;
+      --shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #dbeafe 0, transparent 32%), var(--bg);
+      color: var(--ink);
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 36px 20px 52px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .panel, .result-panel, .uml-card, .method-panel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel { padding: 28px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.08;
+      margin: 0 0 14px;
+      letter-spacing: -0.04em;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .summary-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 13px;
+    }
+    .summary-item strong { display:block; font-size: 15px; }
+    .summary-item span { color: var(--muted); font-size: 12px; }
+
+    .side-info { padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
+    .side-info h2 { margin:0 0 12px; font-size: 20px; }
+    .side-info p { color: var(--muted); line-height: 1.6; margin: 0 0 16px; }
+    .btn-row { display:flex; flex-wrap: wrap; gap:10px; }
+    button {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      border-radius: 16px;
+      padding: 12px 15px;
+      font-weight: 800;
+      transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    button:hover { transform: translateY(-2px); }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 10px 22px rgba(37,99,235,.22); }
+    .btn-secondary { background: #e2e8f0; color: #334155; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .uml-card { padding: 22px; overflow: hidden; }
+    .section-title { display:flex; align-items:center; justify-content:space-between; gap: 14px; margin-bottom: 16px; }
+    .section-title h2 { margin: 0; font-size: 23px; letter-spacing: -0.02em; }
+    .hint { color: var(--muted); font-size: 13px; }
+
+    .diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0 4px;
+    }
+
+    .node-row { display: flex; justify-content: center; gap: 24px; width: 100%; }
+    .node-row.children { align-items: stretch; }
+    .connector { width: 2px; height: 22px; background: var(--line); }
+    .branch {
+      width: min(430px, 78%);
+      height: 24px;
+      border-top: 2px solid var(--line);
+      position: relative;
+    }
+    .branch::before, .branch::after {
+      content:""; position:absolute; top:-2px; width:2px; height:24px; background: var(--line);
+    }
+    .branch::before { left:0; }
+    .branch::after { right:0; }
+
+    .node {
+      background: var(--card);
+      border: 2px solid #e2e8f0;
+      border-radius: 24px;
+      padding: 18px;
+      width: min(250px, 100%);
+      min-height: 130px;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, .08);
+      text-align: left;
+      position: relative;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+    .node:hover, .node.active {
+      transform: translateY(-4px);
+      border-color: var(--primary);
+      box-shadow: 0 18px 34px rgba(37, 99, 235, .18);
+    }
+    .node abstract { font-style: italic; }
+    .node .kind { color: var(--primary); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+    .node h3 { margin: 6px 0 6px; font-size: 21px; }
+    .node p { margin: 0; color: var(--muted); line-height: 1.45; font-size: 13px; }
+    .node .method { margin-top: 12px; background:#f1f5f9; border-radius: 13px; padding: 8px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color:#0f172a; }
+
+    .result-panel { padding: 22px; position: sticky; top: 18px; }
+    .result-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 14px; }
+    .result-header h2 { margin:0; font-size: 23px; }
+    .class-pill { background:#ecfeff; color:#0e7490; border-radius:999px; padding:8px 11px; font-size:12px; font-weight:900; }
+    .screen {
+      min-height: 190px;
+      border-radius: 20px;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 18px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      margin-bottom: 16px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+    .screen .comment { color: #93c5fd; }
+    .screen .ok { color: #86efac; }
+    .screen .warn { color: #fdba74; }
+
+    .meter-wrap { margin: 10px 0 18px; }
+    .meter-top { display:flex; justify-content: space-between; color: var(--muted); font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+    .meter { height: 14px; border-radius:999px; background:#e2e8f0; overflow:hidden; }
+    .meter-fill { height:100%; width: 0%; background: linear-gradient(90deg, #38bdf8, #2563eb); transition: width .35s ease; }
+
+    .method-panel { padding: 18px; margin-top: 18px; }
+    .method-panel h3 { margin:0 0 10px; font-size: 16px; }
+    pre { overflow:auto; margin:0; color:#dbeafe; background:#1e293b; border-radius:16px; padding:15px; font-size: 12px; line-height: 1.55; }
+
+    .log-list { display:flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .log-item { background:#f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; font-size: 13px; color:#334155; }
+
+    footer { color: var(--muted); text-align:center; margin-top:32px; font-size:13px; }
+
+    @media (max-width: 900px) {
+      .hero, .workspace { grid-template-columns: 1fr; }
+      .result-panel { position: static; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .node-row.children { flex-direction: column; align-items: center; }
+      .branch { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="panel">
+        <div class="badge">자료구조 과제 2 · OOP Polymorphism</div>
+        <h1>스마트 기기 상속 구조와 다형성 시각화</h1>
+        <p class="lead">
+          과제 1의 <strong>DeviceADT → Device → AirConditioner / RobotVacuum</strong> 구조를 웹 화면에 시각화했습니다.
+          각 노드를 클릭하면 실제 JavaScript 클래스 객체의 <strong>operate()</strong> 메서드가 호출되고,
+          하위 클래스마다 오버라이딩된 결과가 다르게 출력됩니다.
+        </p>
+        <div class="summary-grid">
+          <div class="summary-item"><strong>ADT</strong><span>DeviceADT 추상 인터페이스</span></div>
+          <div class="summary-item"><strong>Base</strong><span>Device 공통 속성/메서드</span></div>
+          <div class="summary-item"><strong>Instances</strong><span>에어컨, 로봇청소기</span></div>
+        </div>
+      </div>
+      <div class="panel side-info">
+        <div>
+          <h2>사용 방법</h2>
+          <p>왼쪽 상속 구조에서 카드를 클릭하세요. 같은 이름의 <strong>operate()</strong> 메서드를 호출해도 객체의 실제 클래스에 따라 다른 동작이 실행됩니다.</p>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" id="runAllBtn">다형성 전체 실행</button>
+          <button class="btn-secondary" id="resetBtn">초기화</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <article class="uml-card">
+        <div class="section-title">
+          <h2>상속 구조 시각화</h2>
+          <span class="hint">카드 클릭 → 메서드 호출</span>
+        </div>
+
+        <div class="diagram" aria-label="Device OOP class hierarchy">
+          <div class="node-row">
+            <button class="node" data-key="DeviceADT" aria-label="DeviceADT class node">
+              <span class="kind">Abstract ADT</span>
+              <h3>&lt;&lt;abstract&gt;&gt;<br>DeviceADT</h3>
+              <p>name, brand, introduce(), operate()의 규칙을 정의합니다.</p>
+              <div class="method">abstract operate()</div>
+            </button>
+          </div>
+          <div class="connector"></div>
+          <div class="node-row">
+            <button class="node" data-key="Device" aria-label="Device base class node">
+              <span class="kind">Base Class</span>
+              <h3>Device</h3>
+              <p>공통 속성 _name, _brand를 저장하고 기본 동작을 제공합니다.</p>
+              <div class="method">operate()</div>
+            </button>
+          </div>
+          <div class="connector"></div>
+          <div class="branch"></div>
+          <div class="node-row children">
+            <button class="node" data-key="AirConditioner" aria-label="AirConditioner class node">
+              <span class="kind">Subclass</span>
+              <h3>AirConditioner</h3>
+              <p>Device를 상속하고 에어컨에 맞게 operate()를 오버라이딩합니다.</p>
+              <div class="method">override operate()</div>
+            </button>
+            <button class="node" data-key="RobotVacuum" aria-label="RobotVacuum class node">
+              <span class="kind">Subclass</span>
+              <h3>RobotVacuum</h3>
+              <p>Device를 상속하고 로봇청소기에 맞게 operate()를 오버라이딩합니다.</p>
+              <div class="method">override operate()</div>
+            </button>
+          </div>
+        </div>
+
+        <div class="method-panel">
+          <h3>핵심 구현 코드</h3>
+          <pre id="codePreview">class Device {
+  operate() {
+    return `${this.name} 기기가 작동합니다.`;
+  }
+}
+
+class AirConditioner extends Device {
+  operate() {
+    return `${this.name} 에어컨이 시원한 바람을 냅니다.`;
+  }
+}</pre>
+        </div>
+      </article>
+
+      <aside class="result-panel">
+        <div class="result-header">
+          <h2>실행 결과</h2>
+          <span class="class-pill" id="selectedClass">선택 없음</span>
+        </div>
+        <div class="screen" id="consoleScreen"><span class="comment">// 왼쪽 클래스 노드를 클릭하면 결과가 여기에 출력됩니다.</span></div>
+        <div class="meter-wrap">
+          <div class="meter-top"><span>작동 에너지</span><span id="energyText">0%</span></div>
+          <div class="meter"><div class="meter-fill" id="energyFill"></div></div>
+        </div>
+        <div class="log-list" id="logList">
+          <div class="log-item">대기 중: 아직 메서드가 호출되지 않았습니다.</div>
+        </div>
+      </aside>
+    </section>
+
+    <footer>
+      20233126 김민준 · 과제 1의 Python OOP 구조를 웹앱으로 변환
+    </footer>
+  </main>
+
+  <script>
+    class DeviceADT {
+      get name() { throw new Error('DeviceADT는 name을 직접 구현하지 않습니다.'); }
+      get brand() { throw new Error('DeviceADT는 brand를 직접 구현하지 않습니다.'); }
+      introduce() { throw new Error('introduce()는 하위 클래스에서 구현해야 합니다.'); }
+      operate() { throw new Error('operate()는 하위 클래스에서 구현해야 합니다.'); }
+    }
+
+    class Device extends DeviceADT {
+      constructor(name, brand) {
+        super();
+        this._name = name;
+        this._brand = brand;
+      }
+      get name() { return this._name; }
+      get brand() { return this._brand; }
+      introduce() { return `제품명: ${this.name}, 브랜드: ${this.brand}`; }
+      operate() { return `${this.name} 기기가 작동합니다.`; }
+    }
+
+    class AirConditioner extends Device {
+      operate() { return `${this.name} 에어컨이 시원한 바람을 냅니다.`; }
+    }
+
+    class RobotVacuum extends Device {
+      operate() { return `${this.name} 로봇청소기가 바닥을 청소합니다.`; }
+    }
+
+    const registry = {
+      DeviceADT: {
+        label: 'DeviceADT',
+        energy: 12,
+        code: `class DeviceADT {\n  operate() {\n    throw new Error('하위 클래스에서 구현');\n  }\n}`,
+        run: () => ({
+          title: 'DeviceADT는 추상 클래스입니다.',
+          lines: [
+            '[클래스] DeviceADT',
+            'name, brand, introduce(), operate()의 규칙만 정의합니다.',
+            '직접 객체를 만들기보다 Device 또는 하위 클래스가 구현합니다.'
+          ],
+          log: 'DeviceADT 노드 확인: 추상 메서드 구조를 표시했습니다.'
+        })
+      },
+      Device: {
+        label: 'Device',
+        energy: 36,
+        instance: new Device('SmartDevice', 'Generic'),
+        code: `class Device extends DeviceADT {\n  operate() {\n    return \`${'${this.name}'} 기기가 작동합니다.\`;\n  }\n}`
+      },
+      AirConditioner: {
+        label: 'AirConditioner',
+        energy: 76,
+        instance: new AirConditioner('Whisen', 'LG'),
+        code: `class AirConditioner extends Device {\n  operate() {\n    return \`${'${this.name}'} 에어컨이 시원한 바람을 냅니다.\`;\n  }\n}`
+      },
+      RobotVacuum: {
+        label: 'RobotVacuum',
+        energy: 88,
+        instance: new RobotVacuum('CleanBot', 'Samsung'),
+        code: `class RobotVacuum extends Device {\n  operate() {\n    return \`${'${this.name}'} 로봇청소기가 바닥을 청소합니다.\`;\n  }\n}`
+      }
+    };
+
+    const screen = document.getElementById('consoleScreen');
+    const selectedClass = document.getElementById('selectedClass');
+    const energyFill = document.getElementById('energyFill');
+    const energyText = document.getElementById('energyText');
+    const logList = document.getElementById('logList');
+    const codePreview = document.getElementById('codePreview');
+
+    function printLines(lines) {
+      screen.textContent = lines.join('\n');
+    }
+
+    function addLog(text) {
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      item.textContent = text;
+      logList.prepend(item);
+    }
+
+    function setActive(key) {
+      document.querySelectorAll('.node').forEach(node => {
+        node.classList.toggle('active', node.dataset.key === key);
+      });
+    }
+
+    function runNode(key) {
+      const data = registry[key];
+      setActive(key);
+      selectedClass.textContent = data.label;
+      energyFill.style.width = `${data.energy}%`;
+      energyText.textContent = `${data.energy}%`;
+      codePreview.textContent = data.code;
+
+      if (data.run) {
+        const result = data.run();
+        printLines(result.lines);
+        addLog(result.log);
+        return;
+      }
+
+      const instance = data.instance;
+      const lines = [
+        `[선택 클래스] ${data.label}`,
+        instance.introduce(),
+        `operate() 호출 결과: ${instance.operate()}`,
+        '',
+        `실제 객체 타입: ${instance.constructor.name}`,
+        '같은 operate() 호출이지만 객체 타입에 따라 결과가 달라집니다.'
+      ];
+      printLines(lines);
+      addLog(`${data.label}.operate() 실행 완료`);
+    }
+
+    function runPolymorphismDemo() {
+      const devices = [
+        new AirConditioner('Whisen', 'LG'),
+        new RobotVacuum('CleanBot', 'Samsung')
+      ];
+      setActive('');
+      selectedClass.textContent = 'Polymorphism Demo';
+      energyFill.style.width = '100%';
+      energyText.textContent = '100%';
+      codePreview.textContent = `const devices = [\n  new AirConditioner('Whisen', 'LG'),\n  new RobotVacuum('CleanBot', 'Samsung')\n];\n\ndevices.forEach(device => device.operate());`;
+      const lines = ['[다형성 전체 실행]'];
+      devices.forEach((device, index) => {
+        lines.push(`${index + 1}. ${device.constructor.name}`);
+        lines.push(`   ${device.introduce()}`);
+        lines.push(`   ${device.operate()}`);
+      });
+      lines.push('', 'Device 타입 배열 안에 서로 다른 하위 클래스 객체를 넣고 같은 메서드를 호출했습니다.');
+      printLines(lines);
+      addLog('다형성 전체 실행: AirConditioner, RobotVacuum 순서로 operate() 호출');
+    }
+
+    function resetView() {
+      setActive('');
+      selectedClass.textContent = '선택 없음';
+      energyFill.style.width = '0%';
+      energyText.textContent = '0%';
+      screen.innerHTML = '<span class="comment">// 왼쪽 클래스 노드를 클릭하면 결과가 여기에 출력됩니다.</span>';
+      logList.innerHTML = '<div class="log-item">대기 중: 아직 메서드가 호출되지 않았습니다.</div>';
+      codePreview.textContent = `class Device {\n  operate() {\n    return \`${'${this.name}'} 기기가 작동합니다.\`;\n  }\n}\n\nclass AirConditioner extends Device {\n  operate() {\n    return \`${'${this.name}'} 에어컨이 시원한 바람을 냅니다.\`;\n  }\n}`;
+    }
+
+    document.querySelectorAll('.node').forEach(node => {
+      node.addEventListener('click', () => runNode(node.dataset.key));
+    });
+    document.getElementById('runAllBtn').addEventListener('click', runPolymorphismDemo);
+    document.getElementById('resetBtn').addEventListener('click', resetView);
+
+    const params = new URLSearchParams(window.location.search);
+    const selected = params.get('select');
+    if (selected && registry[selected]) {
+      setTimeout(() => runNode(selected), 350);
+    }
+  </script>
+</body>
+</html>
